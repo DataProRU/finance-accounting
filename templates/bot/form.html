@@ -14,7 +14,7 @@
   <style>
     body {
       font-family: "Roboto", sans-serif;
-      background-color: #e7e5e2;
+      background-color: white;
       color: #333;
       margin: 0;
 
@@ -34,9 +34,9 @@
       overflow: hidden;
     }
 
-    .form-container:hover {
+    /* .form-container:hover {
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-    }
+    } */
 
     .header {
       background-color: #fff;
@@ -515,7 +515,7 @@
           </select>
         </div>
         <div>
-          <select id="account_type" name="account_type">
+          <select id="account_type" name="account_type" required>
             <option disabled selected value="">Статья</option>
           </select>
         </div>
@@ -589,7 +589,7 @@
         </select>
       </div>
 
-      <button id="submitButton" type="submit" class="distance" disabled>Отправить</button>
+      <button id="submitButton" type="submit" class="distance">Отправить</button>
 
       <a href="https://google.com" class="datapro_link">Разработано DATAPRO</a>
     </form>
@@ -602,18 +602,7 @@
   <script>
     function checkFormValidity() {
       const form = document.getElementById('financialForm');
-      const submitButton = document.getElementById('submitButton');
-      let valid = true;
 
-      Array.from(form.elements).forEach(element => {
-        if (!element.required) return;
-        if (element.offsetParent === null) return;
-        if (!element.value || element.value.trim() === "") {
-          valid = false;
-        }
-      });
-
-      submitButton.disabled = !valid;
     }
 
     document.getElementById('financialForm').addEventListener('input', checkFormValidity);
@@ -626,7 +615,8 @@
       const datePlaceholder = document.querySelector(".date-placeholder");
       const selects = document.querySelectorAll('select');
       const invisibleContainer = document.getElementsByClassName("invisible")[0];
-      const operationTypeSelect = document.getElementById('operation_type'); // Reference to operation_type select
+      const invisible2Container = document.getElementsByClassName("invisible2")[0];
+      const operationTypeSelect = document.getElementById('operation_type');
 
       form.reset();
 
@@ -653,13 +643,13 @@
       walletFromField.style.display = 'none';
       walletToField.style.display = 'none';
       invisibleContainer.style.display = 'flex';
+      invisible2Container.style.display = 'none';
 
-      // Reset operation_type select styling to initial state
       operationTypeSelect.classList.remove('distance');
       operationTypeSelect.style.marginBottom = '3px';
 
-      // Reset required attributes to initial state
       categorySelect.required = true;
+      accountTypeSelect.required = true; // Добавлено
       dateInput.required = true;
       document.getElementById('payment_type').required = true;
       document.getElementById('wallet_select').required = true;
@@ -727,8 +717,6 @@
         });
       }
 
-      invisible2Container.style.display = "none";
-
       if (selectedOperation === 'Перемещение') {
         // Скрываем поля, не нужные для "Перемещения"
         dateFinishField.style.display = 'none';
@@ -749,6 +737,7 @@
 
         // Управление атрибутами required
         categorySelect.required = false;
+        accountTypeSelect.required = false; // Добавлено
         dateFinishInput.required = false;
         document.getElementById('payment_type').required = false;
         walletSelect.required = false;
@@ -767,7 +756,7 @@
         accountTypeSelect.parentElement.style.display = 'block';
         walletField.style.display = 'block';
         invisibleContainer.style.display = "flex";
-
+        invisible2Container.style.display = "none";
 
         // Скрываем поля для "Перемещения"
         walletFromField.style.display = 'none';
@@ -779,6 +768,7 @@
 
         // Управление атрибутами required
         categorySelect.required = true;
+        accountTypeSelect.required = true; // Добавлено
         dateFinishInput.required = true;
         document.getElementById('payment_type').required = true;
         walletSelect.required = true;
@@ -790,7 +780,7 @@
         walletToSelect.value = '';
       }
 
-      checkFormValidity(); // Добавлено для обновления состояния кнопки
+      checkFormValidity();
     });
 
     document.getElementById('financialForm').addEventListener('submit', function (event) {
@@ -814,15 +804,12 @@
           document.getElementById('successMessage').style.display = 'block';
           document.getElementById('submitButton').disabled = false;
 
-          // Скрываем сообщение об успешной загрузке через 3 секунды
           setTimeout(() => {
             document.getElementById('successMessage').style.display = 'none';
           }, 3000);
 
-          // Reset the form to its initial state
           resetFormState();
 
-          // Restore the date fields to their original values
           document.getElementById('date').value = dateValue;
           document.getElementById('date_finish').value = dateFinishValue;
         })
