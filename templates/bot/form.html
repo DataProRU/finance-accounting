@@ -355,6 +355,26 @@
         background-color: #fff;
       }
 
+      /* Общие стили для всех неактивных селекторов */
+      select option[disabled] {
+        color: #aaa;
+      }
+      
+      select:invalid {
+        color: #aaa;
+      }
+      
+      select option:not([disabled]) {
+        color: #000;
+      }
+
+      /* Специфичные стили для селектора Кошелёк */
+      #wallet_select:invalid,
+      #wallet_from_select:invalid,
+      #wallet_to_select:invalid {
+        color: #aaa;
+      }
+
       @-moz-document url-prefix() {
         .date-wrapper input.empty {
           color: transparent;
@@ -458,7 +478,7 @@
           </div>
         </div>
 
-        <div class="date-wrapper distance">
+        <div class="date-wrapper distance invisible">
           <label for="date_finish" class="date-placeholder"
             >Дата назначения</label
           >
@@ -536,7 +556,7 @@
         ></textarea>
 
         <div id="wallet" class="distance">
-          <select id="wallet_select" name="wallet">
+          <select id="wallet_select" name="wallet" required>
             <option disabled selected value="">Кошелёк</option>
             {% for wallet in wallets %}
             <option value="{{ wallet.name }}">{{ wallet.name }} ({{ wallet.username }}) {{ wallet.balance|int }}</option>
@@ -560,321 +580,227 @@
       </div>
     </div>
 
-    <script>
-      function checkFormValidity() {
-        const form = document.getElementById("financialForm");
+  <script>
+    function checkFormValidity() {
+      const form = document.getElementById('financialForm');
+
+    }
+
+    document.getElementById('financialForm').addEventListener('input', checkFormValidity);
+    document.getElementById('financialForm').addEventListener('change', checkFormValidity);
+    document.addEventListener('DOMContentLoaded', checkFormValidity);
+
+    function resetFormState() {
+      const form = document.getElementById('financialForm');
+      const dateInput = document.getElementById("date_finish");
+      const datePlaceholder = document.querySelector(".date-placeholder");
+      const selects = document.querySelectorAll('select');
+      const invisibleContainer = document.getElementsByClassName("invisible")[0];
+      const invisible2Container = document.getElementsByClassName("invisible2")[0];
+      const operationTypeSelect = document.getElementById('operation_type');
+
+      form.reset();
+
+      dateInput.classList.add("empty");
+      datePlaceholder.style.opacity = "1";
+
+      selects.forEach(select => {
+        select.style.color = '#aaa';
+      });
+
+      const dateFinishField = dateInput.parentElement;
+      const paymentTypeField = document.getElementById('payment_type').parentElement;
+      const walletFromField = document.getElementById('wallet_from');
+      const walletToField = document.getElementById('wallet_to');
+      const walletField = document.getElementById('wallet');
+      const categorySelect = document.getElementById('accounting_type');
+      const accountTypeSelect = document.getElementById('account_type');
+
+      dateFinishField.style.display = 'block';
+      paymentTypeField.style.display = 'block';
+      categorySelect.parentElement.style.display = 'block';
+      accountTypeSelect.parentElement.style.display = 'block';
+      walletField.style.display = 'block';
+      walletFromField.style.display = 'none';
+      walletToField.style.display = 'none';
+      invisibleContainer.style.display = 'flex';
+      invisible2Container.style.display = 'none';
+
+      operationTypeSelect.classList.remove('distance');
+      operationTypeSelect.style.marginBottom = '3px';
+
+      categorySelect.required = true;
+      accountTypeSelect.required = true; // Добавлено
+      dateInput.required = true;
+      document.getElementById('payment_type').required = true;
+      document.getElementById('wallet_select').required = true;
+      document.getElementById('wallet_from_select').required = false;
+      document.getElementById('wallet_to_select').required = false;
+
+      categorySelect.innerHTML = '<option value="" disabled selected>Категория</option>';
+      accountTypeSelect.innerHTML = '<option value="" disabled selected>Статья</option>';
+
+      checkFormValidity();
+    }
+
+    const selects = document.querySelectorAll('select');
+    selects.forEach(select => {
+      select.style.color = select.value ? '#000' : '#aaa';
+      select.addEventListener('change', function () {
+        this.style.color = this.value ? '#000' : '#aaa';
+      });
+    });
+
+    const categoryArticles = {{ category_articles | tojson }};
+    const operationCategories = {{ operation_categories | tojson }};
+
+    document.getElementById('accounting_type').addEventListener('change', function () {
+      const selectedCategory = this.value;
+      const accountTypeSelect = document.getElementById('account_type');
+      accountTypeSelect.innerHTML = '<option value="" disabled selected>Выберите статью</option>';
+
+      if (categoryArticles[selectedCategory]) {
+        categoryArticles[selectedCategory].forEach(article => {
+          const option = document.createElement('option');
+          option.value = article;
+          option.textContent = article;
+          accountTypeSelect.appendChild(option);
+        });
+      }
+    });
+
+    document.getElementById('operation_type').addEventListener('change', function () {
+      const selectedOperation = this.value;
+      const categorySelect = document.getElementById('accounting_type');
+      const accountTypeSelect = document.getElementById('account_type');
+      const dateFinishInput = document.getElementById('date_finish');
+      const dateFinishField = dateFinishInput.parentElement;
+      const paymentTypeField = document.getElementById('payment_type').parentElement;
+      const walletFromField = document.getElementById('wallet_from');
+      const walletToField = document.getElementById('wallet_to');
+      const walletField = document.getElementById('wallet');
+      const walletFromSelect = document.getElementById('wallet_from_select');
+      const walletToSelect = document.getElementById('wallet_to_select');
+      const walletSelect = document.getElementById('wallet_select');
+      const invisibleContainer = document.getElementsByClassName("invisible")[0];
+      const invisible2Container = document.getElementsByClassName("invisible2")[0];
+      const operationTypeSelect = document.getElementById('operation_type');
+
+      categorySelect.innerHTML = '<option value="" disabled selected>Выберите категорию</option>';
+      accountTypeSelect.innerHTML = '<option value="" disabled selected>Выберите статью</option>';
+
+      if (operationCategories[selectedOperation]) {
+        operationCategories[selectedOperation].forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          categorySelect.appendChild(option);
+        });
       }
 
-      document
-        .getElementById("financialForm")
-        .addEventListener("input", checkFormValidity);
-      document
-        .getElementById("financialForm")
-        .addEventListener("change", checkFormValidity);
-      document.addEventListener("DOMContentLoaded", checkFormValidity);
+      if (selectedOperation === 'Перемещение') {
+        // Скрываем поля, не нужные для "Перемещения"
+        dateFinishField.style.display = 'none';
+        paymentTypeField.style.display = 'none';
+        categorySelect.parentElement.style.display = 'none';
+        accountTypeSelect.parentElement.style.display = 'none';
+        walletField.style.display = 'none';
+        invisibleContainer.style.display = "none";
+        invisible2Container.style.display = "flex";
 
-      function resetFormState() {
-        const form = document.getElementById("financialForm");
-        const dateInput = document.getElementById("date_finish");
-        const datePlaceholder = document.querySelector(".date-placeholder");
-        const selects = document.querySelectorAll("select");
-        const invisibleContainer =
-          document.getElementsByClassName("invisible")[0];
-        const invisible2Container =
-          document.getElementsByClassName("invisible2")[0];
-        const operationTypeSelect = document.getElementById("operation_type");
+        // Показываем поля для "Перемещения"
+        walletFromField.style.display = 'block';
+        walletToField.style.display = 'block';
 
-        form.reset();
+        // Добавляем класс distance к operation_type select
+        operationTypeSelect.classList.add('distance');
+        operationTypeSelect.style.marginBottom = '';
 
-        dateInput.classList.add("empty");
-        datePlaceholder.style.opacity = "1";
+        // Управление атрибутами required
+        categorySelect.required = false;
+        accountTypeSelect.required = false; // Добавлено
+        dateFinishInput.required = false;
+        document.getElementById('payment_type').required = false;
+        walletSelect.required = false;
+        walletFromSelect.required = true;
+        walletToSelect.required = true;
 
-        selects.forEach((select) => {
-          select.style.color = "#aaa";
-        });
-
-        const dateFinishField = dateInput.parentElement;
-        const paymentTypeField =
-          document.getElementById("payment_type").parentElement;
-        const walletFromField = document.getElementById("wallet_from");
-        const walletToField = document.getElementById("wallet_to");
-        const walletField = document.getElementById("wallet");
-        const categorySelect = document.getElementById("accounting_type");
-        const accountTypeSelect = document.getElementById("account_type");
-
-        dateFinishField.style.display = "block";
-        paymentTypeField.style.display = "block";
-        categorySelect.parentElement.style.display = "block";
-        accountTypeSelect.parentElement.style.display = "block";
-        walletField.style.display = "block";
-        walletFromField.style.display = "none";
-        walletToField.style.display = "none";
+        // Сбрасываем значения скрытых полей
+        categorySelect.value = '';
+        accountTypeSelect.value = '';
+        document.getElementById('payment_type').value = '';
+      } else {
+        // Показываем все основные поля
+        dateFinishField.style.display = 'block';
+        paymentTypeField.style.display = 'block';
+        categorySelect.parentElement.style.display = 'block';
+        accountTypeSelect.parentElement.style.display = 'block';
+        walletField.style.display = 'block';
         invisibleContainer.style.display = "flex";
         invisible2Container.style.display = "none";
 
-        operationTypeSelect.classList.remove("distance");
-        operationTypeSelect.style.marginBottom = "3px";
+        // Скрываем поля для "Перемещения"
+        walletFromField.style.display = 'none';
+        walletToField.style.display = 'none';
 
+        // Удаляем класс distance и восстанавливаем inline стиль margin-bottom
+        operationTypeSelect.classList.remove('distance');
+        operationTypeSelect.style.marginBottom = '14px';
+
+        // Управление атрибутами required
         categorySelect.required = true;
         accountTypeSelect.required = true; // Добавлено
-        dateInput.required = true;
-        document.getElementById("payment_type").required = true;
-        document.getElementById("wallet_select").required = true;
-        document.getElementById("wallet_from_select").required = false;
-        document.getElementById("wallet_to_select").required = false;
+        dateFinishInput.required = true;
+        document.getElementById('payment_type').required = true;
+        walletSelect.required = true;
+        walletFromSelect.required = false;
+        walletToSelect.required = false;
 
-        categorySelect.innerHTML =
-          '<option value="" disabled selected>Категория</option>';
-        accountTypeSelect.innerHTML =
-          '<option value="" disabled selected>Статья</option>';
-
-        checkFormValidity();
+        // Сбрасываем значения полей для "Перемещения"
+        walletFromSelect.value = '';
+        walletToSelect.value = '';
       }
 
-      const selects = document.querySelectorAll("select");
-      selects.forEach((select) => {
-        select.style.color = select.value ? "#000" : "#aaa";
-        select.addEventListener("change", function () {
-          this.style.color = this.value ? "#000" : "#aaa";
+      checkFormValidity();
+    });
+
+    document.getElementById('financialForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const dateValue = document.getElementById('date').value;
+      const dateFinishValue = document.getElementById('date_finish').value;
+
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('submitButton').disabled = true;
+
+      const formData = new FormData(this);
+
+      fetch('/submit', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('successMessage').style.display = 'block';
+          document.getElementById('submitButton').disabled = false;
+
+          setTimeout(() => {
+            document.getElementById('successMessage').style.display = 'none';
+          }, 3000);
+
+          resetFormState();
+
+          document.getElementById('date').value = dateValue;
+          document.getElementById('date_finish').value = dateFinishValue;
+        })
+        .catch(error => {
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('submitButton').disabled = false;
+          alert('Произошла ошибка: ' + error.message);
         });
-      });
+    });
+  </script>
+</body>
 
-      const categoryArticles = {{ category_articles | tojson }};
-      const operationCategories = {{ operation_categories | tojson }};
-
-      document
-        .getElementById("accounting_type")
-        .addEventListener("change", function () {
-          const selectedCategory = this.value;
-          const accountTypeSelect = document.getElementById("account_type");
-          accountTypeSelect.innerHTML =
-            '<option value="" disabled selected>Выберите статью</option>';
-
-          if (categoryArticles[selectedCategory]) {
-            categoryArticles[selectedCategory].forEach((article) => {
-              const option = document.createElement("option");
-              option.value = article;
-              option.textContent = article;
-              accountTypeSelect.appendChild(option);
-            });
-          }
-        });
-
-      document
-        .getElementById("operation_type")
-        .addEventListener("change", function () {
-          const selectedOperation = this.value;
-          const categorySelect = document.getElementById("accounting_type");
-          const accountTypeSelect = document.getElementById("account_type");
-          const dateFinishInput = document.getElementById("date_finish");
-          const dateFinishField = dateFinishInput.parentElement;
-          const paymentTypeField =
-            document.getElementById("payment_type").parentElement;
-          const walletFromField = document.getElementById("wallet_from");
-          const walletToField = document.getElementById("wallet_to");
-          const walletField = document.getElementById("wallet");
-          const walletFromSelect =
-            document.getElementById("wallet_from_select");
-          const walletToSelect = document.getElementById("wallet_to_select");
-          const walletSelect = document.getElementById("wallet_select");
-          const invisibleContainer =
-            document.getElementsByClassName("invisible")[0];
-          const invisible2Container =
-            document.getElementsByClassName("invisible2")[0];
-          const operationTypeSelect = document.getElementById("operation_type");
-
-          categorySelect.innerHTML =
-            '<option value="" disabled selected>Выберите категорию</option>';
-          accountTypeSelect.innerHTML =
-            '<option value="" disabled selected>Выберите статью</option>';
-
-          if (operationCategories[selectedOperation]) {
-            operationCategories[selectedOperation].forEach((category) => {
-              const option = document.createElement("option");
-              option.value = category;
-              option.textContent = category;
-              categorySelect.appendChild(option);
-            });
-          }
-
-          if (selectedOperation === "Перемещение") {
-            // Скрываем поля, не нужные для "Перемещения"
-            dateFinishField.style.display = "none";
-            paymentTypeField.style.display = "none";
-            categorySelect.parentElement.style.display = "none";
-            accountTypeSelect.parentElement.style.display = "none";
-            walletField.style.display = "none";
-            invisibleContainer.style.display = "none";
-            invisible2Container.style.display = "flex";
-
-            // Показываем поля для "Перемещения"
-            walletFromField.style.display = "block";
-            walletToField.style.display = "block";
-
-            // Добавляем класс distance к operation_type select
-            operationTypeSelect.classList.add("distance");
-            operationTypeSelect.style.marginBottom = "";
-
-            // Управление атрибутами required
-            categorySelect.required = false;
-            accountTypeSelect.required = false; // Добавлено
-            dateFinishInput.required = false;
-            document.getElementById("payment_type").required = false;
-            walletSelect.required = false;
-            walletFromSelect.required = true;
-            walletToSelect.required = true;
-
-            // Сбрасываем значения скрытых полей
-            categorySelect.value = "";
-            accountTypeSelect.value = "";
-            document.getElementById("payment_type").value = "";
-          } else {
-            // Показываем все основные поля
-            dateFinishField.style.display = "block";
-            paymentTypeField.style.display = "block";
-            categorySelect.parentElement.style.display = "block";
-            accountTypeSelect.parentElement.style.display = "block";
-            walletField.style.display = "block";
-            invisibleContainer.style.display = "flex";
-            invisible2Container.style.display = "none";
-
-            // Скрываем поля для "Перемещения"
-            walletFromField.style.display = "none";
-            walletToField.style.display = "none";
-
-            // Удаляем класс distance и восстанавливаем inline стиль margin-bottom
-            operationTypeSelect.classList.remove("distance");
-            operationTypeSelect.style.marginBottom = "14px";
-
-            // Управление атрибутами required
-            categorySelect.required = true;
-            accountTypeSelect.required = true; // Добавлено
-            dateFinishInput.required = true;
-            document.getElementById("payment_type").required = true;
-            walletSelect.required = true;
-            walletFromSelect.required = false;
-            walletToSelect.required = false;
-
-            // Сбрасываем значения полей для "Перемещения"
-            walletFromSelect.value = "";
-            walletToSelect.value = "";
-          }
-
-          checkFormValidity();
-        });
-
-      document
-        .getElementById("financialForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
-          const dateValue = document.getElementById("date").value;
-          const dateFinishValue = document.getElementById("date_finish").value;
-
-          document.getElementById("loader").style.display = "block";
-          document.getElementById("successMessage").style.display = "none";
-          document.getElementById("submitButton").disabled = true;
-
-          onst operationType = document.getElementById('operation_type').value;
-         const amount = parseFloat(document.getElementById('amount').value);
-
-         if (operationType === "Расход") {
-             const walletSelect = document.getElementById('wallet_select');
-             const selectedLabel = walletSelect.options[walletSelect.selectedIndex].text;
-             const parts = selectedLabel.split(' ');
-             const money = parseFloat(parts[parts.length - 1]);
-
-             if (money - amount < 0) {
-                 alert('Ошибка: Сумма указана ниже баланса кошелька');
-                 document.getElementById('loader').style.display = 'none';
-                 document.getElementById('submitButton').disabled = false;
-                 return;
-             }
-         } else if (operationType === "Перемещение") {
-             const walletSelect = document.getElementById('wallet_from_select');
-             const selectedLabel = walletSelect.options[walletSelect.selectedIndex].text;
-             const parts = selectedLabel.split(' ');
-             const money = parseFloat(parts[parts.length - 1]);
-
-             if (money - amount < 0) {
-                 alert('Ошибка: Сумма указана ниже баланса кошелька, откуда переводятся средства');
-                 document.getElementById('loader').style.display = 'none';
-                 document.getElementById('submitButton').disabled = false;
-                 return;
-             }
-         }
-
-          const formData = new FormData(this);
-
-          fetch("/submit", {
-            method: "POST",
-            body: formData,
-          })
-            .then((response) => response.text())
-            .then((html) => {
-              document.getElementById("loader").style.display = "none";
-              document.getElementById("successMessage").style.display = "block";
-              document.getElementById("submitButton").disabled = false;
-
-              setTimeout(() => {
-                document.getElementById("successMessage").style.display =
-                  "none";
-              }, 3000);
-              if (operationType === "Расход") {
-                 const walletSelect = document.getElementById('wallet_select');
-                 const selectedLabel = walletSelect.options[walletSelect.selectedIndex].text;
-                 const parts = selectedLabel.split(' ');
-                 const currentBalance = parseFloat(parts[parts.length - 1]);
-                 const newBalance = currentBalance - amount;
-
-                 walletSelect.options[walletSelect.selectedIndex].text = `${parts[0]} (${parts[1]}) ${newBalance.toFixed(2)}`;
-             } else if (operationType === "Приход") {
-                 const walletSelect = document.getElementById('wallet_select');
-                 const selectedLabel = walletSelect.options[walletSelect.selectedIndex].text;
-                 const parts = selectedLabel.split(' ');
-                 const currentBalance = parseFloat(parts[parts.length - 1]);
-                 const newBalance = currentBalance + amount;
-
-                 walletSelect.options[walletSelect.selectedIndex].text = `${parts[0]} (${parts[1]}) ${newBalance.toFixed(2)}`;
-             } else if (operationType === "Перемещение") {
-                 const walletFromSelect = document.getElementById('wallet_from_select');
-                 const walletToSelect = document.getElementById('wallet_to_select');
-
-                 function updateBalanceInSelect(selectElement, value, amountChange) {
-                     const options = selectElement.options;
-                     for (let i = 0; i < options.length; i++) {
-                         if (options[i].value === value) {
-                             const text = options[i].text;
-                             const newText = text.replace(/(-?\d+\.\d{2})$/, (match) => {
-                                 const newBalance = (parseFloat(match) + amountChange).toFixed(2);
-                                 return newBalance;
-                             });
-                             options[i].text = newText;
-                             break;
-                         }
-                     }
-                 }
-
-                 const fromValue = walletFromSelect.value;
-                 const toValue = walletToSelect.value;
-
-                 updateBalanceInSelect(walletFromSelect, fromValue, -amount);
-                 updateBalanceInSelect(walletToSelect, toValue, amount);
-
-                 updateBalanceInSelect(walletToSelect, fromValue, -amount);
-                 updateBalanceInSelect(walletFromSelect, toValue, amount);
-             }
-
-              resetFormState();
-
-              document.getElementById("date").value = dateValue;
-              document.getElementById("date_finish").value = dateFinishValue;
-            })
-            .catch((error) => {
-              document.getElementById("loader").style.display = "none";
-              document.getElementById("submitButton").disabled = false;
-              alert("Произошла ошибка: " + error.message);
-            });
-        });
-    </script>
-  </body>
 </html>
