@@ -1,10 +1,13 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 import logging
 import gspread
+from sqlalchemy.orm import Session
+
 from database import TgUser, get_db, PaymentTypes, Operations, Categories, Articles, Wallets
 from databases import Database
-from fastapi import FastAPI, Form, Request, APIRouter, Depends
+from fastapi import FastAPI, Form, Request, APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pytz import timezone
@@ -23,8 +26,8 @@ logger = logging.getLogger(__name__)
 try:
     gc = gspread.service_account(filename="credentials.json")
     sht2 = gc.open_by_url(
-    'https://docs.google.com/spreadsheets/d/1OXEELojvTNU82JNgzi2HRuMgZT8WvhvSDSeYyWAmPrg/edit?gid=0#gid=0'
-            )
+        'https://docs.google.com/spreadsheets/d/1OXEELojvTNU82JNgzi2HRuMgZT8WvhvSDSeYyWAmPrg/edit?gid=0#gid=0'
+    )
     worksheet = sht2.get_worksheet(0)
 except Exception as e:
     print(f"Ошибка при инициализации gspread: {str(e)}")
@@ -100,6 +103,7 @@ async def submit_form(
         wallet_from: Optional[str] = Form(None),
         wallet_to: Optional[str] = Form(None),
         wallet: Optional[str] = Form(None),
+        db: Database = Depends(get_db),
 ):
     try:
         current_time = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M:%S")
@@ -135,9 +139,30 @@ async def submit_form(
             new_row[-1] = wallet_to
             new_row[7] = -new_row[7]
             worksheet.append_row(new_row, value_input_option="USER_ENTERED")
+            wallet_from_instance = await db.fetch_one(Wallets.__table__.select().where(Wallets.name == wallet_from))
+            if wallet_from_instance:
+                new_balance = wallet_from_instance.balance - Decimal(amount)
+                query = Wallets.__table__.update().where(Wallets.name == wallet_from).values(balance=new_balance)
+                await db.execute(query)
+            else:
+                raise HTTPException(status_code=404, detail="Wallet not found")
+            wallet_to_instance = await db.fetch_one(Wallets.__table__.select().where(Wallets.name == wallet_to))
+            if wallet_to_instance:
+                new_balance = wallet_to_instance.balance + Decimal(amount)
+                query = Wallets.__table__.update().where(Wallets.name == wallet_to).values(balance=new_balance)
+                await db.execute(query)
+            else:
+                raise HTTPException(status_code=404, detail="Wallet not found")
         else:
             new_row.append(wallet)
             worksheet.append_row(new_row, value_input_option="USER_ENTERED")
+            wallet_instance = await db.fetch_one(Wallets.__table__.select().where(Wallets.name == wallet))
+            if wallet_instance:
+                new_balance = wallet_instance.balance + Decimal(amount)
+                query = Wallets.__table__.update().where(Wallets.name == wallet).values(balance=new_balance)
+                await db.execute(query)
+            else:
+                raise HTTPException(status_code=404, detail="Wallet not found")
 
         # Получаем текущий размер таблицы
         num_rows = len(worksheet.get_all_values())
