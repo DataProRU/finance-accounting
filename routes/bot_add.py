@@ -97,7 +97,7 @@ async def submit_form(
         accounting_type: Optional[str] = Form(None),
         account_type: Optional[str] = Form(None),
         date_finish: Optional[str] = Form(None),
-        amount: float = Form(...),
+        amount: int = Form(...),
         payment_type: Optional[str] = Form(None),
         comment: str = Form(...),
         wallet_from: Optional[str] = Form(None),
@@ -105,6 +105,8 @@ async def submit_form(
         wallet: Optional[str] = Form(None),
         db: Database = Depends(get_db),
 ):
+    form_data = await request.form()
+    print("Received form data:", dict(form_data))
     try:
         current_time = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M:%S")
         username = username.replace("%20", " ")

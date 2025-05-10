@@ -5,3 +5,9 @@ Username: Лариса, Password: zad5cpaB
 Username: Кристина, Password: Edggcf2T
 Username: Алена, Password: 12345qwerty
 Username: user, Password: 2606QWmg
+Username: Андрей Лиханов, Password: 123123
+Username: Андрей Лиханов, Password: 123456789QW
+Username: Павел Ершов, Password: 123456789PE
+Username: Андрей Лиханов, Password: 123123
+Username: demo, Password: 111999000
+Username: Тестовый, Password: 123123

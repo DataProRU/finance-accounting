@@ -3,7 +3,9 @@ credentials.json
 __pycache__
 venv_name
 .DS_Store
-
+ 
+uvicorn.log
 # Byte-compiled / optimized / DLL files
 __pycache__/
 idea/
+eq_rental.db
